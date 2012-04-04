@@ -68,7 +68,7 @@ create = (server, name, cb) ->
 
     # names and paths
     id = APP + "_" + path.basename(url).replace(".git","") + "_" + name
-    parent = "~/" + APP
+    parent = "$HOME/" + APP
     wd = "#{parent}/#{id}"
     repo = wd + ".git"
     upstart = "/etc/init/#{id}.conf"
@@ -88,7 +88,7 @@ create = (server, name, cb) ->
       chdir #{wd}
       respawn
       respawn limit 5 5 
-      exec npm start >> #{log} 2>&1
+      exec npm start >> #{logfile} 2>&1
     """
 
     # http://toroid.org/ams/git-website-howto
