@@ -30,7 +30,16 @@ Usage
 
 ### example
     
+    # you only need to run this once
     gogogo add test someuser@example.com
+
+    # now deploy over an over
+    git push test master
+
+    # change some stuff
+    ...
+
+    # deploy again
     git push test master
 
 Limitations
