@@ -39,7 +39,8 @@ Usage
 
 ### example
 
-    # package.json
+package.json
+
     { 
         "name":"somemodule",
         ...
@@ -49,6 +50,8 @@ Usage
         }
     }
 
+
+bash
 
     # you only need to run this once
     gogogo add test someuser@example.com
