@@ -1,12 +1,44 @@
-# command-line program to automatically deploy stuff
-# our arguments
+###
+CLI to automatically deploy stuff, kind of like heroku. 
+Ubuntu only! (upstart)
 
-# step one: create a new app on the server
-# step two: git push it
+woot.sh (what you need to run your file - same for each server)
 
-cp = require 'child_process'
-spawn = cp.spawn
-exec = cp.exec
+woot create <SERVER> <NAME>
+ - creates a new deploy of your app, remembers the name
+
+woot <NAME> <BRANCH>
+ - deploys the branch to the named location
+
+RUN - node app.js (restart/start)
+INSTALL - npm install (deploy)
+
+NAMES
+ - remember the server
+ - set environment variables
+ - remember the last branch?
+
+woot run
+ - runs from woot.json
+
+DEFAULTS: 
+woot create <SERVER> (default)
+woot deploy <BRANCH> (default)
+woot deploy (default) (master)
+woot run
+
+
+WORK WITH TVSERVER? - you can specify super.conf in the command-line arguments
+
+###
+
+{spawn, exec} = require 'child_process'
+fs = require 'fs'
+path = require 'path'
+
+APP = "woot"
+CONF = "woot.json"
+DEFAULT = "default"
 
 args = process.argv.slice(2)
 server = args[0]
@@ -16,41 +48,83 @@ repo = args[2]
 server = "root@dev.i.tv"
 name = "test-autodeploy"
 
-console.log "AUTODEPLOY", server
-
-
-# git config --get remote.origin.url
-
-# sets up the git repo on the server, based on the current git remote
-# installs the git remote to match branches?
-
-# wait a minute, what about the branch? is it 1:1?
-# no, you just create one, and give it a name
-# hmm.... it needs a name, no?
-
-# you're going to forget its there :)
-
 
 # gets the repo url for the current directory
 repourl = (dir, cb) ->
   exec "git config --get remote.origin.url", {cwd:dir}, (err, stdout, stderr) ->
     if err? then return cb(new Error("Could not find git url"))
-    cb null, stdout
+    cb null, stdout.replace("\n","")
 
-install = (server, cb) ->
+# reads a config file
+read = (f, cb) ->
+  fs.readFile f, (err, data) ->
+    if err? then return cb(new Error("Missing: " + f))
+
+    try
+      parsed = JSON.parse(data)
+    catch e
+      return cb(new Error("JSON Error: " + e.message))
+
+    cb null, parsed
+
+# sets everything up so git pushes work in the future!
+create = (server, name, cb) ->
+  console.log "CREATING"
+  console.log " name: #{name}"
+  console.log " server: #{server}"
   repourl process.cwd(), (err, url) ->
     if err? then return cb err
+    console.log " repo: #{url}"
 
-    command = """
-      this is my string
+    # DON'T NEED CONF FILE YET
+    #read confFile, (err, c) ->
+      #if err? then return cb err
+      #if not run? then return cb(new Error(CONF + " should specify run:"))
+
+    # unique service name
+    uniqueName = APP + "_" + path.basename(url).replace(".git","") + "_" + name
+    repoPath = "~/woot/" + uniqueName
+    upstartPath = "/etc/init/#{uniqueName}.conf"
+    logPath = "#{repoPath}/log.txt"
+
+    console.log " id: #{uniqueName}"
+    console.log " path: #{repoPath}"
+
+    # upstart service
+    service = """
+      description '#{uniqueName}'
+      start on startup
+      chdir #{repoPath}
+      respawn
+      respawn limit 5 5 
+      exec bash woot.sh >> #{logPath}
     """
 
-    console.log url, command
+    # command
+    commands = """
+      cd ~
+      mkdir -p #{repoPath}
+      git clone #{url} #{repoPath}
+      echo "#{service}" > #{upstartPath}
+    """
 
-    #spawn 'ssh', ['-tt', 'xxx']
+    #console.log "---------------------"
+    #console.log commands
+    console.log "---------------------"
 
-install server, (err) ->
-  if err? 
-    console.log err.message
-    process.exit 1
-  console.log err, "Done"
+    ssh = spawn 'ssh', [server, commands]
+    ssh.stdout.on 'data', (data) -> console.log data.toString()
+    ssh.stderr.on 'data', (data) -> console.log data.toString()
+    ssh.on 'exit', (code) -> 
+      if code then cb(new Error("Failed"))
+      cb()
+
+deploy = (name, cb) ->
+  console.log "DEPLOYING"
+  console.log " name: #{name}"
+
+#create "root@dev.i.tv", "test", (err) ->
+  #if err?
+    #console.log err.message
+    #process.exit 1
+  #console.log "OK"
