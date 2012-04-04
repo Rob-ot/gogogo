@@ -1,7 +1,16 @@
 Go Go Go
 ========
 
-Gogogo is a cli designed to let you deploy via git hooks to your own server, heroku-style. It uses your package.json file to get information about how to run and install your application
+Gogogo is a cli designed to let you deploy via git hooks to your own server, heroku-style. It uses your package.json file to get information about how to run and install your application.
+
+While this uses package.json, it isn't specific to node. You can specify anything in `install` and `start`
+
+### Goals
+
+1. Easy to setup
+2. Easy to redeploy 
+3. Deploy to multiple servers
+4. Deploy different branches to the same server
 
 Installation
 ------------
@@ -57,5 +66,41 @@ Roadmap
 * gogogo logs
 * gogogo restart
 * ability to specify sub-folders that contain package.json files
+
+Help
+---
+
+### Environment variables
+
+If they are the same no matter which server is deployed, put them in your start script. 
+
+    "start":"DB_HOST=localhost node app.js"
+
+If they refer to something about the server you are on, set them on the server itself. In bashrc or something. Any apps deployed to that server will have those environment variables
+
+### Multiple servers
+
+To deploy to multiple servers, just run `gogogo add` with the different servers and pick a unique `name` each time.
+
+    gogogo add test user@test.example.com
+    gogogo add staging user@staging.example.com
+
+    git push test master
+    git push staging master
+
+### Multiple branches on the same server
+
+You can deploy any branch over your old remote by pushing to it. To have multiple versions of an app running at the same time, call `gogogo add` with different names and the same server.
+
+    gogogo add test user@test.example.com
+    gogogo add featurex user@test.example.com
+    
+    git push test master
+    git push featurex featurex
+
+Note that for web servers you'll want to change the port in your featurex branch or it will conflict.
+
+
+    
 
 
