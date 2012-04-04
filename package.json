@@ -1,21 +1,13 @@
 {
-  "author": "Sean Hess",
-  "description":"CLI to automate deploys based on package.json",
   "name": "gogogo",
-  "version": "0.0.1",
-  "repository": {
-    "url": ""
-  },
-  "scripts": {
-    "install":"node_modules/.bin/coffee -cw .",
-    "start":"node fake.js"
-  },
+  "description":"CLI to automate deploys based on package.json",
+  "author": "Sean Hess",
+  "version": "0.1.4",
+  "repository": { "url": "git@github.com:idottv/gogogo.git" },
+  "bin": { "gogogo" : "gogogo.js" },
+  "scripts": {},
   "dependencies": {
     "coffee-script":"1.2.0"
   },
-  "devDependencies": {},
-  "optionalDependencies": {},
-  "engines": {
-    "node": "0.6.x"
-  }
+  "engines": { "node": "0.6.x" }
 }
