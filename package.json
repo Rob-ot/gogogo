@@ -6,7 +6,7 @@
     "url": ""
   },
   "scripts": {
-    "install":"node_modules/.bin/coffee -cw ."
+    "install":"node_modules/.bin/coffee -cw .",
     "start":"node fake.js"
   },
   "dependencies": {
