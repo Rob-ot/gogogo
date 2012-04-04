@@ -96,6 +96,7 @@ create = (server, name, cb) ->
     hook = """
       #!/bin/sh
       GIT_WORK_TREE=#{wd} git checkout -f
+      cd #{wd}
       npm install
       start #{id}
     """
