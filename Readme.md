@@ -22,6 +22,8 @@ Usage
 
 ### package.json
 
+Note: these are standard package.json scripts, and can be tested locally with `npm install` and `npm start`
+
     { 
         "name":"somemodule",
         ...
@@ -70,6 +72,7 @@ Limitations
 
 1. Only works on ubuntu (requires upstart to be installed)
 2. Can't handle cron yet
+3. Server-level environment variables
 
 Roadmap
 -------
@@ -90,7 +93,7 @@ If they are the same no matter which server is deployed, put them in your start 
 
     "start":"DB_HOST=localhost node app.js"
 
-If they refer to something about the server you are on, set them on the server itself. In bashrc or something. Any apps deployed to that server will have those environment variables
+If they refer to something about the server you are on, I'd like to figure out a way to set them on the server itself, so that any app on that server has the variables. I don't know how to do this yet.  
 
 ### Multiple servers
 
