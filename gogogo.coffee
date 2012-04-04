@@ -23,7 +23,7 @@ repourl = (dir, cb) ->
 
 # sets everything up so git pushes work in the future!
 create = (server, name, cb) ->
-  console.log "CREATING"
+  console.log "GOGOGO CREATING!"
   console.log " name: #{name}"
   console.log " server: #{server}"
   repourl process.cwd(), (err, url) ->
@@ -39,7 +39,7 @@ create = (server, name, cb) ->
     upstart = "/etc/init/#{id}.conf"
     logfile = "log.txt"
     hookfile = "#{repo}/hooks/post-receive"
-    deployurl = "ssh://#{server}/#{repo}"
+    deployurl = "ssh://#{server}/~/#{PREFIX}/#{id}.git"
 
     console.log " id: #{id}"
     console.log " repo: #{repo}"
@@ -61,9 +61,13 @@ create = (server, name, cb) ->
     # git post-receive hook
     hook = """
       #!/bin/sh
-      GIT_WORK_TREE=#{wd} git checkout -f
+      read oldrev newrev refname
+      echo 'GOGOGO HOOK!'
+      echo \\$newrev
+      GIT_WORK_TREE=#{wd} git reset --hard \\$newrev
       cd #{wd}
-      npm install
+      npm install --unsafe-perm
+      stop #{id}
       start #{id}
     """
 
@@ -76,9 +80,8 @@ create = (server, name, cb) ->
       chmod +x #{hookfile}
     """
 
-    console.log "---------------------"
-    console.log remote
-    console.log "---------------------"
+    #console.log remote
+    console.log ""
 
     ssh = spawn 'ssh', [server, remote]
     ssh.stdout.on 'data', (data) -> console.log data.toString()
@@ -91,6 +94,8 @@ create = (server, name, cb) ->
         # ignore errs here, the remote might not exist
         exec "git remote add #{name} #{deployurl}", (err, stdout, stderr) ->
           if err? then return cb err
+          console.log "------------------------"
+          console.log "deploy: 'git push #{name} BRANCH'"
           cb()
 
 # RUN THE THING
@@ -104,5 +109,5 @@ done = (err) ->
 usage = -> console.log "Usage: gogogo create NAME USER@SERVER"
 
 switch action
-  when "add" then create name, server, done
+  when "add" then create server, name, done
   else usage()
