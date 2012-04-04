@@ -72,7 +72,7 @@ create = (server, name, cb) ->
     wd = "#{parent}/#{id}"
     repo = wd + ".git"
     upstart = "/etc/init/#{id}.conf"
-    log = "#{wd}/log.txt"
+    logfile = "log.txt"
     hookfile = "#{repo}/hooks/post-receive"
     deployurl = "ssh://#{server}/#{repo}"
 
@@ -88,7 +88,7 @@ create = (server, name, cb) ->
       chdir #{wd}
       respawn
       respawn limit 5 5 
-      exec npm start >> #{log}
+      exec npm start >> #{log} 2>&1
     """
 
     # http://toroid.org/ams/git-website-howto
@@ -104,7 +104,7 @@ create = (server, name, cb) ->
 
     # command
     remote = """
-      mkdir -p #{parent}
+      mkdir -p #{wd}
       git clone --bare #{url} #{repo}
       echo "#{service}" > #{upstart}
       echo "#{hook}" > #{hookfile}
