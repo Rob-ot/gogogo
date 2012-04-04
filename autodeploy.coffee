@@ -65,6 +65,7 @@ create = (server, name, cb) ->
     if err? then return cb err
     console.log " repo: #{url}"
 
+
     # names and paths
     id = APP + "_" + path.basename(url).replace(".git","") + "_" + name
     parent = "~/" + APP
