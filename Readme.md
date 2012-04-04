@@ -38,11 +38,22 @@ Usage
 
 
 ### example
-    
+
+    # package.json
+    { 
+        "name":"somemodule",
+        ...
+        "scripts": {
+          "install":"coffee -c .",
+          "start":"PORT=5333 node app.js"
+        }
+    }
+
+
     # you only need to run this once
     gogogo add test someuser@example.com
 
-    # now deploy over an over
+    # now deploy over and over
     git push test master
 
     # change some stuff
