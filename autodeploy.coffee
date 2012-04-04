@@ -32,13 +32,11 @@ WORK WITH TVSERVER? - you can specify super.conf in the command-line arguments
 
 ###
 
+APP = "gogogo"
+
 {spawn, exec} = require 'child_process'
 fs = require 'fs'
 path = require 'path'
-
-APP = "woot"
-CONF = "woot.json"
-DEFAULT = "default"
 
 args = process.argv.slice(2)
 server = args[0]
@@ -49,23 +47,14 @@ server = "root@dev.i.tv"
 name = "test-autodeploy"
 
 
+# 1 # create: sets up the git repo, creates a git remote for you?
+# 2 # deploy: automatic on git hook
+
 # gets the repo url for the current directory
 repourl = (dir, cb) ->
   exec "git config --get remote.origin.url", {cwd:dir}, (err, stdout, stderr) ->
     if err? then return cb(new Error("Could not find git url"))
     cb null, stdout.replace("\n","")
-
-# reads a config file
-read = (f, cb) ->
-  fs.readFile f, (err, data) ->
-    if err? then return cb(new Error("Missing: " + f))
-
-    try
-      parsed = JSON.parse(data)
-    catch e
-      return cb(new Error("JSON Error: " + e.message))
-
-    cb null, parsed
 
 # sets everything up so git pushes work in the future!
 create = (server, name, cb) ->
@@ -76,55 +65,71 @@ create = (server, name, cb) ->
     if err? then return cb err
     console.log " repo: #{url}"
 
-    # DON'T NEED CONF FILE YET
-    #read confFile, (err, c) ->
-      #if err? then return cb err
-      #if not run? then return cb(new Error(CONF + " should specify run:"))
+    # names and paths
+    id = APP + "_" + path.basename(url).replace(".git","") + "_" + name
+    parent = "~/" + APP
+    wd = "#{parent}/#{id}"
+    repo = wd + ".git"
+    upstart = "/etc/init/#{id}.conf"
+    log = "#{wd}/log.txt"
+    hookfile = "#{repo}/hooks/post-receive"
+    deployurl = "ssh://#{server}/#{repo}"
 
-    # unique service name
-    uniqueName = APP + "_" + path.basename(url).replace(".git","") + "_" + name
-    repoPath = "~/woot/" + uniqueName
-    upstartPath = "/etc/init/#{uniqueName}.conf"
-    logPath = "#{repoPath}/log.txt"
-
-    console.log " id: #{uniqueName}"
-    console.log " path: #{repoPath}"
+    console.log " id: #{id}"
+    console.log " repo: #{repo}"
+    console.log " wd: #{wd}"
+    console.log " remote: #{deployurl}"
 
     # upstart service
     service = """
-      description '#{uniqueName}'
+      description '#{id}'
       start on startup
-      chdir #{repoPath}
+      chdir #{wd}
       respawn
       respawn limit 5 5 
-      exec bash woot.sh >> #{logPath}
+      exec npm start >> #{log}
+    """
+
+    # http://toroid.org/ams/git-website-howto
+    # git clone --bare URL <name>.git
+    # git post-receive hook
+    hook = """
+      #!/bin/sh
+      GIT_WORK_TREE=#{wd} git checkout -f
+      npm install
+      start #{id}
     """
 
     # command
-    commands = """
-      cd ~
-      mkdir -p #{repoPath}
-      git clone #{url} #{repoPath}
-      echo "#{service}" > #{upstartPath}
+    remote = """
+      mkdir -p #{parent}
+      git clone --bare #{url} #{repo}
+      echo "#{service}" > #{upstart}
+      echo "#{hook}" > #{hookfile}
+      chmod +x #{hookfile}
     """
 
-    #console.log "---------------------"
-    #console.log commands
+    console.log "---------------------"
+    console.log remote
     console.log "---------------------"
 
-    ssh = spawn 'ssh', [server, commands]
+    ssh = spawn 'ssh', [server, remote]
     ssh.stdout.on 'data', (data) -> console.log data.toString()
     ssh.stderr.on 'data', (data) -> console.log data.toString()
     ssh.on 'exit', (code) -> 
       if code then cb(new Error("Failed"))
-      cb()
 
-deploy = (name, cb) ->
-  console.log "DEPLOYING"
-  console.log " name: #{name}"
+      # now install local stuff
+      exec "git remote rm #{name}", (err, stdout, stderr) ->
+        # ignore errs here, the remote might not exist
+        exec "git remote add #{name} #{deployurl}", (err, stdout, stderr) ->
+          if err? then return cb err
+          cb()
 
-#create "root@dev.i.tv", "test", (err) ->
-  #if err?
-    #console.log err.message
-    #process.exit 1
-  #console.log "OK"
+
+
+create "root@dev.i.tv", "test", (err) ->
+  if err?
+    console.log err.message
+    process.exit 1
+  console.log "OK"
