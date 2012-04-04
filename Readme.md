@@ -11,12 +11,24 @@ Installation
 Usage
 -----
 
+### package.json
+
+    { 
+        "name":"somemodule",
+        ...
+        "scripts": {
+          "install":"anything you want to do before starting, like compiling coffee scripts",
+          "start":"command to start your server"
+        }
+    }
+
+### in your local repo
+
     gogogo add <name> <server>
     git push <name> <branch>
 
 
-Example
--------
+### example
     
     gogogo add test someuser@example.com
     git push test master
@@ -32,5 +44,9 @@ Roadmap
 
 * cron
 * gogogo rm
+* gogogo ps
+* gogogo logs
+* gogogo restart
+* ability to specify sub-folders that contain package.json files
 
 
