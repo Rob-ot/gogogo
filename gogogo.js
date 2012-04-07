@@ -32,7 +32,7 @@ will do it!
 */
 
 (function() {
-  var APP, CONFIG, PREFIX, action, addGitRemote, args, create, deploy, done, exec, fs, local, mainConfig, namedConfig, path, readConfig, readNamedConfig, reponame, restart, serviceId, spawn, ssh, start, stop, usage, writeConfig, _ref;
+  var APP, CONFIG, PREFIX, action, addGitRemote, args, create, deploy, done, exec, fs, local, logs, mainConfig, namedConfig, path, readConfig, readNamedConfig, reponame, restart, serviceId, spawn, ssh, start, stop, usage, writeConfig, _ref;
 
   APP = "gogogo";
 
@@ -122,19 +122,19 @@ will do it!
     console.log(" name: " + name);
     console.log(" server: " + server);
     return reponame(process.cwd(), function(err, rn) {
-      var deployurl, hook, hookfile, id, logfile, parent, remote, repo, service, upstart, wd;
+      var deployurl, hook, hookfile, id, log, parent, remote, repo, service, upstart, wd;
       if (err != null) return cb(err);
       id = serviceId(rn, name);
       parent = "$HOME/" + PREFIX;
       repo = wd = "" + parent + "/" + id;
       upstart = "/etc/init/" + id + ".conf";
-      logfile = "log.txt";
+      log = "log.txt";
       hookfile = "" + repo + "/.git/hooks/post-receive";
       deployurl = "ssh://" + server + "/~/" + PREFIX + "/" + id;
       console.log(" id: " + id);
       console.log(" repo: " + repo);
       console.log(" remote: " + deployurl);
-      service = "description '" + id + "'\nstart on startup\nchdir " + repo + "\nrespawn\nrespawn limit 5 5 \nexec npm start >> " + logfile + " 2>&1";
+      service = "description '" + id + "'\nstart on startup\nchdir " + repo + "\nrespawn\nrespawn limit 5 5 \nexec npm start >> " + log + " 2>&1";
       hook = "read oldrev newrev refname\necho 'GOGOGO HOOK!'\necho \\$newrev\ncd " + repo + "/.git\nGIT_WORK_TREE=" + repo + " git reset --hard \\$newrev || exit 1;";
       remote = "mkdir -p " + repo + "\ncd " + repo + "\ngit init\ngit config receive.denyCurrentBranch ignore\n\necho \"" + service + "\" > " + upstart + "\n\necho \"" + hook + "\" > " + hookfile + "\nchmod +x " + hookfile;
       return ssh(server, remote, function(err) {
@@ -191,6 +191,17 @@ will do it!
     });
   };
 
+  logs = function(name, cb) {
+    return readNamedConfig(name, function(err, config) {
+      var log;
+      if (err != null) return cb(err);
+      log = config.repo + "/log.txt";
+      console.log("Tailing " + log + "... Control-C to exit");
+      console.log("-------------------------------------------------------------");
+      return ssh(config.server, "tail -f " + log, cb);
+    });
+  };
+
   done = function(err) {
     if (err != null) {
       console.log(err.message);
@@ -219,6 +230,9 @@ will do it!
       break;
     case "stop":
       stop(args[1], done);
+      break;
+    case "logs":
+      logs(args[1], done);
       break;
     case "deploy":
       deploy(args[1], args[2], done);

@@ -113,7 +113,7 @@ create = (name, server, cb) ->
     parent = "$HOME/" + PREFIX
     repo = wd = "#{parent}/#{id}"
     upstart = "/etc/init/#{id}.conf"
-    logfile = "log.txt"
+    log = "log.txt"
     hookfile = "#{repo}/.git/hooks/post-receive"
     deployurl = "ssh://#{server}/~/#{PREFIX}/#{id}"
 
@@ -128,7 +128,7 @@ create = (name, server, cb) ->
       chdir #{repo}
       respawn
       respawn limit 5 5 
-      exec npm start >> #{logfile} 2>&1
+      exec npm start >> #{log} 2>&1
     """
 
     # http://toroid.org/ams/git-website-howto
@@ -203,6 +203,15 @@ start = (name, cb) ->
     if err? then return cb err
     ssh config.server, "start #{config.id};", cb
 
+# this should never exit. You have to Command-C it
+logs = (name, cb) ->
+  readNamedConfig name, (err, config) ->
+    if err? then return cb err
+    log = config.repo + "/log.txt"
+    console.log "Tailing #{log}... Control-C to exit"
+    console.log "-------------------------------------------------------------"
+    ssh config.server, "tail -f #{log}", cb
+
 done = (err) ->
   if err?
     console.log err.message
@@ -223,5 +232,6 @@ switch action
   when "restart" then restart args[1], done
   when "start" then start args[1], done
   when "stop" then stop args[1], done
+  when "logs" then logs args[1], done
   when "deploy" then deploy args[1], args[2], done
   else usage()
