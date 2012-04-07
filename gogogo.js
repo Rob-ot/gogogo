@@ -3,19 +3,7 @@
 CLI to automatically deploy stuff, kind of like heroku. 
 Ubuntu only! (upstart)
 
-NEXT STEPS
-Real use case: an individual deploy location is associated with a branch, most of the time. (but not all)
-
-gogogo create dev root@dev.i.tv
- - stores a .ggg/dev.js config file
- - format: module.exports = {} 
- - you commit this (can edit by hand?) 
- - if the file exists then return early
- - does NOT add the git remote (deploy does)
-
 gogogo dev master
- - needs to work even if you haven't added the git remote!
- - deploys master to dev
  - sets .ggg/_.js -> branch=master, 
 
 gogogo
@@ -32,7 +20,7 @@ will do it!
 */
 
 (function() {
-  var APP, CONFIG, PREFIX, action, addGitRemote, args, create, deploy, done, exec, fs, local, logs, mainConfig, namedConfig, path, readConfig, readNamedConfig, reponame, restart, serviceId, spawn, ssh, start, stop, usage, writeConfig, _ref;
+  var APP, CONFIG, PREFIX, action, addGitRemote, args, create, deploy, done, exec, fs, list, local, logs, mainConfig, namedConfig, path, readConfig, readNamedConfig, reponame, restart, serviceId, spawn, ssh, start, stop, usage, writeConfig, _ref;
 
   APP = "gogogo";
 
@@ -202,6 +190,10 @@ will do it!
     });
   };
 
+  list = function(cb) {
+    return local("ls", [".ggg"], cb);
+  };
+
   done = function(err) {
     if (err != null) {
       console.log(err.message);
@@ -233,6 +225,9 @@ will do it!
       break;
     case "logs":
       logs(args[1], done);
+      break;
+    case "list":
+      list(done);
       break;
     case "deploy":
       deploy(args[1], args[2], done);

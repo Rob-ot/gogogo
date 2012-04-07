@@ -2,19 +2,7 @@
 CLI to automatically deploy stuff, kind of like heroku. 
 Ubuntu only! (upstart)
 
-NEXT STEPS
-Real use case: an individual deploy location is associated with a branch, most of the time. (but not all)
-
-gogogo create dev root@dev.i.tv
- - stores a .ggg/dev.js config file
- - format: module.exports = {} 
- - you commit this (can edit by hand?) 
- - if the file exists then return early
- - does NOT add the git remote (deploy does)
-
 gogogo dev master
- - needs to work even if you haven't added the git remote!
- - deploys master to dev
  - sets .ggg/_.js -> branch=master, 
 
 gogogo
@@ -212,6 +200,9 @@ logs = (name, cb) ->
     console.log "-------------------------------------------------------------"
     ssh config.server, "tail -f #{log}", cb
 
+list = (cb) ->
+  local "ls", [".ggg"], cb
+
 done = (err) ->
   if err?
     console.log err.message
@@ -233,5 +224,6 @@ switch action
   when "start" then start args[1], done
   when "stop" then stop args[1], done
   when "logs" then logs args[1], done
+  when "list" then list done
   when "deploy" then deploy args[1], args[2], done
   else usage()
