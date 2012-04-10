@@ -17,6 +17,12 @@ Installation
 
     npm -g install gogogo
 
+Server Requirements
+-------------------
+
+1. Upstart (included with ubuntu)
+2. SSH Access
+
 Usage
 -----
 
@@ -90,8 +96,8 @@ Help
 
     gogogo help
 
-    gogogo deploy [<name>] [<branch>] — deploys branch to named server
-    gogogo create <name> <server> - creates a new named server
+    gogogo create <name> <server> 
+    gogogo deploy [<name>] [<branch>]
 
     gogogo restart [<name>]
     gogogo start [<name>]
@@ -99,7 +105,7 @@ Help
 
     gogogo logs [<name>]
 
-    gogogo list — show available names
+    gogogo list 
 
 ### Environment variables
 
