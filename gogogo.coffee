@@ -39,6 +39,9 @@ run = (args) ->
         when "stop" then stop config, done
         when "logs" then logs config, done
         when "list" then list done
+        when "help" then help done
+        when "--help" then help done
+        when "-h" then help done
         when "deploy"
           branch = args[2] || lastBranch
           deploy config, branch, done
@@ -170,6 +173,18 @@ start = (config, cb) ->
 version = (cb) ->
   package (err, info) ->
     console.log "GOGOGO v#{info.version}"
+
+help = (cb) ->
+  console.log "--------------------------"
+  console.log "gogogo restart [<name>]"
+  console.log "gogogo start [<name>]"
+  console.log "gogogo stop [<name>]"
+  console.log "gogogo logs [<name>] — tail remote log"
+  console.log "gogogo list — show available names"
+  console.log "gogogo help"
+  console.log "gogogo deploy [<name>] [<branch>] — deploys branch to named server"
+  console.log "gogogo create <name> <server> - creates a new named server"
+  cb()
 
 # this should never exit. You have to Command-C it
 logs = (config, cb) ->
