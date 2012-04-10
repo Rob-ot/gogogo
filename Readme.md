@@ -1,7 +1,7 @@
 Go Go Go
 ========
 
-Gogogo is a cli designed to let you deploy web applications as easily as possible. It looks for a package.json file to get information about how to run and install your application.
+Gogogo is a simple command-line tool designed to let you deploy web applications as easily as possible. It looks for a package.json file to get information about how to run and install your application.
 
 While this uses package.json, it isn't specific to node. You can specify anything in `install` and `start`. These are generic package.json fields supported by npm. 
 
@@ -88,18 +88,18 @@ Help
 
 ### Actions
 
-  gogogo help
+    gogogo help
 
-  gogogo deploy [<name>] [<branch>] — deploys branch to named server
-  gogogo create <name> <server> - creates a new named server
+    gogogo deploy [<name>] [<branch>] — deploys branch to named server
+    gogogo create <name> <server> - creates a new named server
 
-  gogogo restart [<name>]
-  gogogo start [<name>]
-  gogogo stop [<name>]
+    gogogo restart [<name>]
+    gogogo start [<name>]
+    gogogo stop [<name>]
 
-  gogogo logs [<name>]
+    gogogo logs [<name>]
 
-  gogogo list — show available names
+    gogogo list — show available names
 
 ### Environment variables
 
@@ -131,7 +131,12 @@ You can deploy any branch over your old remote by pushing to it. To have multipl
 
 Note that for web servers you'll want to change the port in your featurex branch or it will conflict.
 
+### Remembers Last Name and Branch
 
-    
+You can leave the name and branch off any command and it will use the last name and branch from `gogogo deploy`
+
+    gogogo deploy
+    gogogo restart
+    gogogo logs
 
 
