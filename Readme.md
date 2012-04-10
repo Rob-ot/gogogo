@@ -80,9 +80,10 @@ Roadmap
 * cron
 * gogogo rm
 * gogogo ps
-* gogogo logs
-* gogogo restart
 * ability to specify sub-folders that contain package.json files
+
+    √ gogogo logs
+    √ gogogo restart
 
 Help
 ---

@@ -3,20 +3,12 @@ CLI to automatically deploy stuff, kind of like heroku.
 Ubuntu only! (upstart)
 
 gogogo dev master
- - sets .ggg/_.js -> branch=master, 
+ - work without "deploy" keyword
 
 gogogo
+ - deploy sets .ggg/_.js -> branch=master, 
  - runs last "gogogo" command, whatever that was
  - stores to .ggg/_.js
-
-gogogo list
- - shows you the names
-
-http://stackoverflow.com/questions/7152607/git-force-push-current-working-directory
--- git config receieve.denyCurrentBranch ignore
--- and git checkout -f 
-will do it!
-
 ###
 
 APP = "gogogo"
@@ -29,65 +21,37 @@ path = require 'path'
 
 
 
+## RUN #############################################################
 
-
-
-
-
-# gets the repo url for the current directory
-# if it doesn't exist, use the directory name
-reponame = (dir, cb) ->
-  exec "git config --get remote.origin.url", {cwd:dir}, (err, stdout, stderr) ->
-    if err?
-      cb null, path.basename(path.dirname(dir))
-    else
-      url = stdout.replace("\n","")
-      cb null, path.basename(url).replace(".git","")
-
-# write a config file
-writeConfig = (f, obj, cb) ->
-  fs.mkdir path.dirname(f), (err) ->
-    fs.writeFile f, "module.exports = " + JSON.stringify(obj), 0775, cb
-
-# read a config file
-readConfig = (f, cb) ->
-  cb null, require f
-
-namedConfig = (name) -> path.join process.cwd(), CONFIG, name+".js"
-mainConfig = -> path.join process.cwd(), CONFIG, "_main.js"
-
-readNamedConfig = (name, cb) ->
-  readConfig namedConfig(name), cb
-
-serviceId = (repoName, name) -> repoName + "_" + name
-
-# add a git remote
-# NOT IN USE (you can push directly to a git url)
-addGitRemote = (name, url, cb) ->
-  exec "git remote rm #{name}", (err, stdout, stderr) ->
-    # ignore errs here, the remote might not exist
-    exec "git remote add #{name} #{url}", (err, stdout, stderr) ->
+# figure out what to call, and with which arguments
+# args = actual args
+run = (args) ->
+  readMainConfig (lastName, lastBranch) ->
+    action = args[0]
+    name = args[1] || lastName
+    readNamedConfig name, (err, config) ->
       if err? then return cb err
-      cb()
+      console.log "GOGOGO #{action} #{config.name}"
+      switch action
+        when "--version" then version done
+        when "restart" then restart config, done
+        when "start" then start config, done
+        when "stop" then stop config, done
+        when "logs" then logs config, done
+        when "list" then list done
+        when "deploy"
+          branch = args[2] || lastBranch
+          deploy config, branch, done
+        when "add"
+          server = args[2]
+          create name, server, done
+        else usage()
 
-ssh = (server, commands, cb) ->
-  local 'ssh', [server, commands], (err) ->
-    if err? then return cb new Error "SSH Command Failed"
-    cb()
 
+## ACTIONS #########################################################
 
-# runs the commands and dumps output as we get it
-local = (command, args, cb) ->
-  process = spawn command, args
-  process.stdout.on 'data', (data) -> console.log data.toString()
-  process.stderr.on 'data', (data) -> console.log data.toString()
-  process.on 'exit', (code) ->
-    if code then return cb(new Error("Command Failed"))
-    cb()
-
-
-# git pushes or no? NO
-# sets everything up so git pushes work in the future!
+# sets everything up so gogogo deploy will work
+# does not use a git remote, because we can git push to the url
 create = (name, server, cb) ->
   console.log "GOGOGO CREATING!"
   console.log " name: #{name}"
@@ -120,16 +84,18 @@ create = (name, server, cb) ->
     """
 
     # http://toroid.org/ams/git-website-howto
-    # don't use a hook any more, except to check out
+    # we don't use the hook for anything, except making sure it checks out.
+    # you still need the hook. It won't check out otherwise. Not sure why
     hook = """
       read oldrev newrev refname
-      echo 'GOGOGO HOOK!'
+      echo 'GOGOGO checking out:'
       echo \\$newrev
       cd #{repo}/.git
       GIT_WORK_TREE=#{repo} git reset --hard \\$newrev || exit 1;
     """
 
     # command
+    # denyCurrentBranch ignore allows it to accept pushes without complaining
     remote = """
       mkdir -p #{repo}
       cd #{repo}
@@ -154,76 +120,174 @@ create = (name, server, cb) ->
         console.log "-------------------------------"
         console.log "deploy: 'gogogo #{name} BRANCH'"
 
-        cb()
+        writeMainConfig name, null, (err) ->
+          if err? then return cb new Error "Could not write main config"
 
-# we add the git remote at this point, not when we create, because we want anyone who checks out the code to also be able to deploy. I could also temporarily add a git remote? Can you push directly to a url? 
-deploy = (name, branch, cb) ->
-  readNamedConfig name, (err, config) ->
+          cb()
+
+# pushes directly to the url and runs the post stuff by hand. We still use a post-receive hook to checkout the files. 
+deploy = (config, branch, cb) ->
+  console.log "  branch: #{branch}"
+  console.log "PUSHING"
+  local "git", ["push", config.repoUrl, branch], (err) ->
     if err? then return cb err
-    console.log("PUSHING")
-    local "git", ["push", config.repoUrl, branch], (err) ->
+
+    # now install and run
+    command = installCommand(config) + restartCommand(config)
+    ssh config.server, command, (err) ->
       if err? then return cb err
+      writeMainConfig config.name, branch, cb
 
-      command = """
-        echo 'INSTALLING'
-        cd #{config.repo}
-        npm install --unsafe-perm || exit 1;
-        echo 'RESTARTING'
-        stop #{config.id}
-        start #{config.id}
-      """
+## SIMPLE CONTROL ########################################################
 
-      ssh config.server, command, cb
+installCommand = (config) -> """
+    echo 'INSTALLING'
+    cd #{config.repo}
+    npm install --unsafe-perm || exit 1;
+  """
 
-# starts, or restarts the service
-restart = (name, cb) ->
-  readNamedConfig name, (err, config) ->
-    if err? then return cb err
-    ssh config.server, "stop #{config.id}; start #{config.id}", cb
+install = (config, cb) ->
+  console.log "INSTALLING"
+  ssh config.server, installCommand(config), cb
 
-stop = (name, cb) ->
-  readNamedConfig name, (err, config) ->
-    if err? then return cb err
-    ssh config.server, "stop #{config.id};", cb
+restartCommand = (config) -> """
+    echo 'RESTARTING'
+    stop #{config.id}
+    start #{config.id}
+  """
 
-start = (name, cb) ->
-  readNamedConfig name, (err, config) ->
-    if err? then return cb err
-    ssh config.server, "start #{config.id};", cb
+restart = (config, cb) ->
+  ssh config.server, restartCommand(config), cb
+
+stop = (config, cb) ->
+  console.log "STOPPING"
+  ssh config.server, "stop #{config.id};", cb
+
+start = (config, cb) ->
+  console.log "STARTING"
+  ssh config.server, "start #{config.id};", cb
+
+version = (cb) ->
+  package (err, info) ->
+    console.log "GOGOGO v#{info.version}"
 
 # this should never exit. You have to Command-C it
-logs = (name, cb) ->
-  readNamedConfig name, (err, config) ->
-    if err? then return cb err
-    log = config.repo + "/log.txt"
-    console.log "Tailing #{log}... Control-C to exit"
-    console.log "-------------------------------------------------------------"
-    ssh config.server, "tail -f #{log}", cb
+logs = (config, cb) ->
+  log = config.repo + "/log.txt"
+  console.log "Tailing #{log}... Control-C to exit"
+  console.log "-------------------------------------------------------------"
+  ssh config.server, "tail -f #{log}", cb
 
 list = (cb) ->
   local "ls", [".ggg"], cb
-
-done = (err) ->
-  if err?
-    console.log err.message
-    process.exit 1
-  console.log "OK"
 
 usage = -> console.log "Usage: gogogo create NAME USER@SERVER"
 
 
 
 
-# RUN THE THING
-args = process.argv.slice(2)
-action = args[0]
 
-switch action
-  when "add" then create args[1], args[2], done
-  when "restart" then restart args[1], done
-  when "start" then start args[1], done
-  when "stop" then stop args[1], done
-  when "logs" then logs args[1], done
-  when "list" then list done
-  when "deploy" then deploy args[1], args[2], done
-  else usage()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## HELPERS #################################################
+
+package = (cb) -> 
+  fs.readFile path.join(__dirname, "package.json"), (err, data) ->
+    if err? then return cb err
+    cb null, JSON.parse data
+
+done = (err) ->
+  if err?
+    console.log "!!! " + err.message
+    process.exit 1
+  console.log "OK"
+
+# gets the repo url for the current directory
+# if it doesn't exist, use the directory name
+reponame = (dir, cb) ->
+  exec "git config --get remote.origin.url", {cwd:dir}, (err, stdout, stderr) ->
+    if err?
+      cb null, path.basename(path.dirname(dir))
+    else
+      url = stdout.replace("\n","")
+      cb null, path.basename(url).replace(".git","")
+
+# write a config file
+writeConfig = (f, obj, cb) ->
+  fs.mkdir path.dirname(f), (err) ->
+    fs.writeFile f, "module.exports = " + JSON.stringify(obj), 0775, cb
+
+# read a config file
+readConfig = (f, cb) ->
+  try
+    m = require f
+    cb null, m
+  catch e
+    cb e
+
+
+namedConfig = (name) -> path.join process.cwd(), CONFIG, name+".js"
+mainConfig = -> path.join process.cwd(), CONFIG, "_main.js"
+
+readNamedConfig = (name, cb) ->
+  readConfig namedConfig(name), cb
+
+readMainConfig = (cb) ->
+  readConfig namedConfig("_main"), (err, config) ->
+    if err? then return cb()
+    cb config.name, config.branch
+
+writeMainConfig = (name, branch, cb) ->
+  writeConfig namedConfig("_main"), {name, branch}, cb
+
+serviceId = (repoName, name) -> repoName + "_" + name
+
+# add a git remote
+# NOT IN USE (you can push directly to a git url)
+addGitRemote = (name, url, cb) ->
+  exec "git remote rm #{name}", (err, stdout, stderr) ->
+    # ignore errs here, the remote might not exist
+    exec "git remote add #{name} #{url}", (err, stdout, stderr) ->
+      if err? then return cb err
+      cb()
+
+ssh = (server, commands, cb) ->
+  local 'ssh', [server, commands], (err) ->
+    if err? then return cb new Error "SSH Command Failed"
+    cb()
+
+
+# runs the commands and dumps output as we get it
+local = (command, args, cb) ->
+  process = spawn command, args
+  process.stdout.on 'data', (data) -> console.log data.toString().replace(/\n$/, "")
+  process.stderr.on 'data', (data) -> console.log data.toString().replace(/\n$/, "")
+
+  process.on 'exit', (code) ->
+    if code then return cb(new Error("Command Failed"))
+    cb()
+
+
+
+
+
+
+# RUN THE THING
+run process.argv.slice(2)
+
