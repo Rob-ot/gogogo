@@ -1,9 +1,9 @@
 Go Go Go
 ========
 
-Gogogo is a cli designed to let you deploy via git hooks to your own server, heroku-style. It uses your package.json file to get information about how to run and install your application.
+Gogogo is a cli designed to let you deploy web applications as easily as possible. It looks for a package.json file to get information about how to run and install your application.
 
-While this uses package.json, it isn't specific to node. You can specify anything in `install` and `start`
+While this uses package.json, it isn't specific to node. You can specify anything in `install` and `start`. These are generic package.json fields supported by npm. 
 
 ### Goals
 
@@ -35,9 +35,8 @@ Note: these are standard package.json scripts, and can be tested locally with `n
 
 ### in your local repo
 
-    gogogo add <name> <server>
+    gogogo create <name> <server>
     git push <name> <branch>
-
 
 ### example
 
@@ -52,27 +51,29 @@ package.json
         }
     }
 
-
-bash
+in your local terminal
 
     # you only need to run this once
-    gogogo add test someuser@example.com
+    gogogo create test someuser@example.com
 
     # now deploy over and over
-    git push test master
+    gogogo deploy test master
 
     # change some stuff
     ...
 
     # deploy again
-    git push test master
+    gogogo deploy test master
+    
+    # it remembers your last name and branch
+    gogogo deploy
 
 Limitations
 -----------
 
 1. Only works on ubuntu (requires upstart to be installed)
-2. Can't handle cron yet
-3. Server-level environment variables
+2. Can't handle scheduled tasks yet (cron)
+3. Can't handle server-level environment variables yet
 
 Roadmap
 -------
@@ -82,11 +83,23 @@ Roadmap
 * gogogo ps
 * ability to specify sub-folders that contain package.json files
 
-    √ gogogo logs
-    √ gogogo restart
-
 Help
----
+----
+
+### Actions
+
+  gogogo help
+
+  gogogo deploy [<name>] [<branch>] — deploys branch to named server
+  gogogo create <name> <server> - creates a new named server
+
+  gogogo restart [<name>]
+  gogogo start [<name>]
+  gogogo stop [<name>]
+
+  gogogo logs [<name>]
+
+  gogogo list — show available names
 
 ### Environment variables
 
@@ -98,23 +111,23 @@ If they refer to something about the server you are on, I'd like to figure out a
 
 ### Multiple servers
 
-To deploy to multiple servers, just run `gogogo add` with the different servers and pick a unique `name` each time.
+To deploy to multiple servers, just run `gogogo create` with the different servers and pick a unique `name` each time.
 
-    gogogo add test user@test.example.com
-    gogogo add staging user@staging.example.com
+    gogogo create test user@test.example.com
+    gogogo create staging user@staging.example.com
 
-    git push test master
-    git push staging master
+    gogogo deploy test master
+    gogogo deploy staging master
 
 ### Multiple branches on the same server
 
-You can deploy any branch over your old remote by pushing to it. To have multiple versions of an app running at the same time, call `gogogo add` with different names and the same server.
+You can deploy any branch over your old remote by pushing to it. To have multiple versions of an app running at the same time, call `gogogo create` with different names and the same server.
 
-    gogogo add test user@test.example.com
-    gogogo add featurex user@test.example.com
+    gogogo create test user@test.example.com
+    gogogo create featurex user@test.example.com
     
-    git push test master
-    git push featurex featurex
+    gogogo deploy test master
+    gogogo deploy featurex featurex
 
 Note that for web servers you'll want to change the port in your featurex branch or it will conflict.
 
