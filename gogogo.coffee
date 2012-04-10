@@ -25,31 +25,33 @@ path = require 'path'
 
 # figure out what to call, and with which arguments
 # args = actual args
-run = (args) ->
+run = (args, cb) ->
   readMainConfig (lastName, lastBranch) ->
     action = args[0]
     name = args[1] || lastName
-    readNamedConfig name, (err, config) ->
-      if err? then return cb err
-      console.log "GOGOGO #{action} #{config.name}"
-      switch action
-        when "--version" then version done
-        when "restart" then restart config, done
-        when "start" then start config, done
-        when "stop" then stop config, done
-        when "logs" then logs config, done
-        when "list" then list done
-        when "help" then help done
-        when "--help" then help done
-        when "-h" then help done
-        when "deploy"
-          branch = args[2] || lastBranch
-          deploy config, branch, done
-        when "add"
-          server = args[2]
-          create name, server, done
-        else usage()
-
+    switch action
+      when "--version" then version cb
+      when "list" then list cb
+      when "help" then help cb
+      when "--help" then help cb
+      when "-h" then help cb
+      when "create"
+        server = args[2]
+        create name, server, cb
+      else
+        readNamedConfig name, (err, config) ->
+          if err? then return cb new Error("Could not find remote name: #{name}")
+          console.log "GOGOGO #{action} #{name}"
+          switch action
+            when "restart" then restart config, cb
+            when "start" then start config, cb
+            when "stop" then stop config, cb
+            when "logs" then logs config, cb
+            when "deploy"
+              branch = args[2] || lastBranch
+              deploy config, branch, cb
+            else
+              cb new Error("Invalid Action #{action}")
 
 ## ACTIONS #########################################################
 
@@ -121,7 +123,7 @@ create = (name, server, cb) ->
         if err? then return cb new Error "Could not write config file"
 
         console.log "-------------------------------"
-        console.log "deploy: 'gogogo #{name} BRANCH'"
+        console.log "deploy: 'gogogo deploy #{name} <branch>'"
 
         writeMainConfig name, null, (err) ->
           if err? then return cb new Error "Could not write main config"
@@ -191,7 +193,7 @@ logs = (config, cb) ->
   log = config.repo + "/log.txt"
   console.log "Tailing #{log}... Control-C to exit"
   console.log "-------------------------------------------------------------"
-  ssh config.server, "tail -f #{log}", cb
+  ssh config.server, "tail -n 40 -f #{log}", cb
 
 list = (cb) ->
   local "ls", [".ggg"], cb
@@ -226,12 +228,6 @@ package = (cb) ->
   fs.readFile path.join(__dirname, "package.json"), (err, data) ->
     if err? then return cb err
     cb null, JSON.parse data
-
-done = (err) ->
-  if err?
-    console.log "!!! " + err.message
-    process.exit 1
-  console.log "OK"
 
 # gets the repo url for the current directory
 # if it doesn't exist, use the directory name
@@ -304,5 +300,9 @@ local = (command, args, cb) ->
 
 
 # RUN THE THING
-run process.argv.slice(2)
+run process.argv.slice(2), (err) ->
+  if err?
+    console.log "!!! " + err.message
+    process.exit 1
+  console.log "OK"
 
