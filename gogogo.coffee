@@ -71,7 +71,8 @@ create = (name, server, cb) ->
     repo = wd = "#{parent}/#{id}"
     upstart = "/etc/init/#{id}.conf"
     log = "log.txt"
-    hookfile = "#{repo}/.git/hooks/post-receive"
+    hookfolder = "#{repo}/.git/hooks/"
+    hookfile = "#{hookfolder}post-receive"
     deployurl = "ssh://#{server}/~/#{PREFIX}/#{id}"
 
     console.log " id: #{id}"
@@ -109,6 +110,7 @@ create = (name, server, cb) ->
 
       echo "#{service}" > #{upstart}
 
+      mkdir -p #{hookfolder}
       echo "#{hook}" > #{hookfile}
       chmod +x #{hookfile}
     """
